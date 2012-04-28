@@ -45,6 +45,11 @@ class Slushy::Instance
     server.wait_for { state == "terminated" }
   end
 
+  def stop
+    server.stop
+    server.wait_for { state == "stopped" }
+  end
+
   def wait_for_connectivity
     puts "Waiting for ssh connectivity..."
     retry_block(5, [Errno::ECONNREFUSED, Timeout::Error], "Connecting to Amazon refused") do
