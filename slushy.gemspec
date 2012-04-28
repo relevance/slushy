@@ -9,8 +9,8 @@ Gem::Specification.new do |s|
   s.authors     = ["Sam Umbach", "Gabriel Horner", "Alex Redington"]
   s.email       = ["sam@thinkrelevance.com"]
   s.homepage    = "http://github.com/relevance/slushy"
-  s.summary     = %q{Aussie kitchenhand}
-  s.description = %q{Seattle.rb ROXORS}
+  s.summary     = %q{An Aussie kitchen hand helping out Chef}
+  s.description = "Giving Chef a hand in the provisional kitchen - Aussie style. Using Fog's API, creates an instance and converges chef recipes on it."
 
   s.files         = `git ls-files`.split("\n")
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
