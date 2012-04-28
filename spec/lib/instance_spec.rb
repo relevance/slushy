@@ -1,5 +1,6 @@
 require 'spec_helper'
 require 'fog'
+require 'pathname'
 
 describe Slushy::Instance do
   def mock_job(options={})
@@ -146,7 +147,7 @@ describe Slushy::Instance do
     it "converges the given instance" do
       instance.should_receive(:scp).ordered.with('some_path/', "/tmp/chef-solo", :recursive => true).and_return(true)
       instance.should_receive(:run_command).ordered.with("cd /tmp/chef-solo && sudo /var/lib/gems/1.8/bin/chef-solo -c solo.rb -j dna.json").and_return(true)
-      capture_stdout { instance.converge('some_path') }
+      capture_stdout { instance.converge(Pathname.new('some_path')) }
     end
   end
 end
