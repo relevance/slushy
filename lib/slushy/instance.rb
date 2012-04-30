@@ -5,7 +5,7 @@ class Slushy::Instance
 
   def self.launch(connection, config)
     server = connection.servers.create(config)
-    server.wait_for { ready? } or raise Slushy::Error.new("Timeout launching server #{server.id}")
+    server.wait_for { ready? } or raise Slushy::TimeoutError.new("Timeout launching server #{server.id}")
     new(connection, server.id)
   end
 
@@ -34,23 +34,23 @@ class Slushy::Instance
     response = connection.create_image(instance_id, name, description)
     image_id = response.body["imageId"]
     image = connection.images.get(image_id)
-    image.wait_for(3600) { ready? } or raise Slushy::Error.new("Timeout creating snapshot #{image_id}")
+    image.wait_for(3600) { ready? } or raise Slushy::TimeoutError.new("Timeout creating snapshot #{image_id}")
     image_id
   end
 
   def terminate
     server.destroy
-    server.wait_for { state == "terminated" } or raise Slushy::Error.new("Timeout terminating server #{server.id}")
+    server.wait_for { state == "terminated" } or raise Slushy::TimeoutError.new("Timeout terminating server #{server.id}")
   end
 
   def stop
     server.stop
-    server.wait_for { state == "stopped" } or raise Slushy::Error.new("Timeout stopping server #{server.id}")
+    server.wait_for { state == "stopped" } or raise Slushy::TimeoutError.new("Timeout stopping server #{server.id}")
   end
 
   def wait_for_connectivity
     puts "Waiting for ssh connectivity..."
-    retry_block(5, [Errno::ECONNREFUSED, Timeout::Error], "Connecting to Amazon refused") do
+    retry_block(5, [Errno::ECONNREFUSED, Timeout::Error], Slushy::TimeoutError.new("Timeout connecting to server #{server.id}")) do
       sleep 10
       Timeout.timeout(60) { ssh('ls') }
     end
@@ -63,11 +63,11 @@ class Slushy::Instance
   end
 
   def run_command!(command)
-    raise Slushy::Error.new("Failed running '#{command}'") unless run_command(command)
+    raise Slushy::CommandFailedError.new("Failed running '#{command}'") unless run_command(command)
   end
 
   def apt_installs
-    retry_block(5, [Slushy::Error], "Command 'apt-get' failed") do
+    retry_block(5, [Slushy::CommandFailedError], Slushy::CommandFailedError.new("Command 'apt-get' failed")) do
       puts "Updating apt cache..."
       run_command!('sudo apt-get update')
       puts "Installing ruby..."
@@ -94,7 +94,7 @@ class Slushy::Instance
 
   protected
 
-  def retry_block(times, errors, failure)
+  def retry_block(times, retryable_exceptions, retries_failed_exception)
     succeeded = false
     attempts = 0
     last_error = nil
@@ -102,13 +102,13 @@ class Slushy::Instance
       begin
         retval = yield
         succeeded = true
-      rescue *errors => e
+      rescue *retryable_exceptions => e
         attempts +=1
-        puts "#{failure}. Attempting retry #{attempts}..."
+        puts "#{retries_failed_exception.message}. Attempting retry #{attempts}..."
         last_error = e
       end
     end
-    raise Slushy::Error.new(failure) unless succeeded
+    raise retries_failed_exception unless succeeded
     retval
   end
 

@@ -24,7 +24,7 @@ describe Slushy::Instance do
       servers = stub(:create => server)
       connection.stub(:servers).and_return(servers)
       server.stub(:wait_for).and_return(false)
-      lambda { described_class.launch(connection, config) }.should raise_error(Slushy::Error)
+      lambda { described_class.launch(connection, config) }.should raise_error(Slushy::TimeoutError)
     end
 
     it "returns the instance object" do
@@ -73,7 +73,7 @@ describe Slushy::Instance do
       connection.stub(:create_image).and_return(response)
       images.should_receive(:get).with(:some_ami_id).and_return(image)
       image.stub(:wait_for).and_return(false)
-      lambda { instance.snapshot(:some_name, :some_description) }.should raise_error(Slushy::Error)
+      lambda { instance.snapshot(:some_name, :some_description) }.should raise_error(Slushy::TimeoutError)
     end
   end
 
@@ -90,7 +90,7 @@ describe Slushy::Instance do
       instance.stub(:server).and_return(server)
       server.stub(:destroy)
       server.stub(:wait_for).and_return(false)
-      lambda { instance.terminate }.should raise_error(Slushy::Error)
+      lambda { instance.terminate }.should raise_error(Slushy::TimeoutError)
     end
   end
 
@@ -107,11 +107,13 @@ describe Slushy::Instance do
       instance.stub(:server).and_return(server)
       server.stub(:stop)
       server.stub(:wait_for).and_return(false)
-      lambda { instance.stop }.should raise_error(Slushy::Error)
+      lambda { instance.stop }.should raise_error(Slushy::TimeoutError)
     end
   end
 
   describe '#wait_for_connectivity' do
+    before { instance.stub(:server).and_return(server) }
+
     it 'retries if the first attempt fails' do
       instance.should_receive(:ssh).ordered.and_raise(Errno::ECONNREFUSED)
       instance.should_receive(:ssh).ordered.and_return([mock_job])
@@ -136,7 +138,7 @@ describe Slushy::Instance do
       instance.stub(:sleep).and_return(10)
       expect do
         capture_stdout { instance.wait_for_connectivity }
-      end.to raise_error Slushy::Error
+      end.to raise_error Slushy::TimeoutError
     end
   end
 
@@ -147,7 +149,7 @@ describe Slushy::Instance do
       capture_stdout do
         expect do
           instance.run_command!("ls")
-        end.to raise_error Slushy::Error
+        end.to raise_error Slushy::CommandFailedError
       end.should =~ /STDERR: FAIL WHALE/
     end
   end
@@ -168,7 +170,7 @@ describe Slushy::Instance do
       instance.should_receive(:ssh).exactly(5).times.with('sudo apt-get update').and_return([mock_job(:status => 1)])
       expect do
         capture_stdout { instance.apt_installs }
-      end.to raise_error Slushy::Error
+      end.to raise_error Slushy::CommandFailedError
     end
   end
 
