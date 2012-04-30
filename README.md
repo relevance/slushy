@@ -8,12 +8,15 @@ Assumes Fog's API for connecting to and creating instances.
 Provision and converge an instance:
 
 ```ruby
-connection = Fog::Compute.new :provider => 'AWS', :aws_access_key => 'KEY',
-  :aws_secret_access_key => 'SECRET'
+connection = Fog::Compute.new(:provider => 'AWS', :aws_access_key_id => 'KEY', :aws_secret_access_key => 'SECRET')
+
 # Second arg is a hash passed to Fog::Compute::AWS::Servers.create
-instance = Slushy::Instance.launch connection, :flavor_id => 'm1.large', :more => :keys
+instance = Slushy::Instance.launch(connection, :flavor_id => 'm1.large', :more => :keys)
+
+# Install ruby and Chef
 instance.bootstrap
-# Point at directory containing Chef cookbooks
+
+# Converge using your Chef cookbooks
 instance.converge Rails.root.join('provision')
 ```
 
