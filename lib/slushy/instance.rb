@@ -1,8 +1,6 @@
 require 'timeout'
 
 class Slushy::Instance
-  class AptInstallError < StandardError; end
-
   attr_reader :connection, :instance_id
 
   def self.launch(connection, config)
@@ -65,21 +63,17 @@ class Slushy::Instance
   end
 
   def run_command!(command)
-    exit 1 unless run_command(command)
-  end
-
-  def run_apt_command!(command)
-    raise AptInstallError unless run_command(command)
+    raise Slushy::Error.new("Failed running '#{command}'") unless run_command(command)
   end
 
   def apt_installs
-    retry_block(5, [AptInstallError], "Command 'apt-get' failed") do
+    retry_block(5, [Slushy::Error], "Command 'apt-get' failed") do
       puts "Updating apt cache..."
-      run_apt_command!('sudo apt-get update')
+      run_command!('sudo apt-get update')
       puts "Installing ruby..."
-      run_apt_command!('sudo apt-get -y install ruby')
+      run_command!('sudo apt-get -y install ruby')
       puts "Installing rubygems..."
-      run_apt_command!('sudo apt-get -y install rubygems1.8')
+      run_command!('sudo apt-get -y install rubygems1.8')
     end
   end
 
@@ -114,7 +108,7 @@ class Slushy::Instance
         last_error = e
       end
     end
-    exit 1 if !succeeded
+    raise Slushy::Error.new(failure) unless succeeded
     retval
   end
 

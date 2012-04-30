@@ -91,12 +91,12 @@ describe Slushy::Instance do
       stdout.should include 'Attempting retry 3...'
     end
 
-    it 'retries up to five times, then aborts' do
+    it 'retries up to five times, then fails' do
       instance.should_receive(:ssh).exactly(5).times.and_raise(Errno::ECONNREFUSED)
       instance.stub(:sleep).and_return(10)
       expect do
         capture_stdout { instance.wait_for_connectivity }
-      end.to raise_error SystemExit
+      end.to raise_error Slushy::Error
     end
   end
 
@@ -107,7 +107,7 @@ describe Slushy::Instance do
       capture_stdout do
         expect do
           instance.run_command!("ls")
-        end.to raise_error SystemExit
+        end.to raise_error Slushy::Error
       end.should =~ /STDERR: FAIL WHALE/
     end
   end
@@ -124,11 +124,11 @@ describe Slushy::Instance do
       end.to_not raise_error
     end
 
-    it 'retries up to five times, then aborts' do
+    it 'retries up to five times, then fails' do
       instance.should_receive(:ssh).exactly(5).times.with('sudo apt-get update').and_return([mock_job(:status => 1)])
       expect do
         capture_stdout { instance.apt_installs }
-      end.to raise_error SystemExit
+      end.to raise_error Slushy::Error
     end
   end
 
