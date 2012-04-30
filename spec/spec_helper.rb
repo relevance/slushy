@@ -6,7 +6,6 @@ require 'slushy'
 Dir[File.expand_path("support/*.rb", File.dirname(__FILE__))].each {|f| require f}
 
 RSpec.configure do |config|
-  config.include OutputStreams
   config.filter_run :focused => true
   config.filter_run_excluding :disabled => true
   config.run_all_when_everything_filtered = true
