@@ -11,9 +11,10 @@ describe Slushy::Instance do
 
   let(:connection)  { Fog::Compute.new(:provider => 'AWS', :aws_access_key_id => "foo", :aws_secret_access_key => "bar") }
   let(:config)      { {:flavor_id => 'm1.large', :image_id => 'ami-123456', :groups => ['default']} }
-  let(:server)      { connection.servers.create(config) }
+  let(:servers)     { connection.servers.tap {|o| connection.stub(:servers).and_return(o)} }
+  let(:server)      { servers.create(config).tap {|o| servers.stub(:create).and_return(o)} }
   let(:instance_id) { server.id }
-  let(:instance)    { Slushy::Instance.new(connection, instance_id) }
+  let(:instance)    { described_class.new(connection, instance_id) }
 
   describe ".launch" do
     it "launches a new instance" do
@@ -21,14 +22,17 @@ describe Slushy::Instance do
     end
 
     it "raises if wait_for fails" do
-      servers = stub(:create => server)
-      connection.stub(:servers).and_return(servers)
       server.stub(:wait_for).and_return(false)
       lambda { described_class.launch(connection, config) }.should raise_error(Slushy::TimeoutError)
     end
 
     it "returns the instance object" do
       described_class.launch(connection, config).should be_a Slushy::Instance
+    end
+
+    it "passes instance attributes along" do
+      instance = described_class.launch(connection, config, :username => 'admin')
+      instance.instance_attributes.should == {:username => 'admin'}
     end
 
     describe "the new instance" do
@@ -42,10 +46,16 @@ describe Slushy::Instance do
 
   describe "#server" do
     it "retrieves the server from the connection based on instance_id" do
-      servers = stub(:create => server)
-      connection.stub(:servers).and_return(servers)
       servers.should_receive(:get).with(server.id).and_return(server)
       instance.server.should == server
+    end
+
+    it "sets instance attributes" do
+      servers.stub(:get).and_return(server)
+      server.should_receive(:username=).with('admin')
+      server.should_receive(:private_key_path=).with('/home/me/.ssh/id_rsa')
+      instance = described_class.new(connection, instance_id, :username => 'admin', :private_key_path => '/home/me/.ssh/id_rsa')
+      instance.server
     end
   end
 

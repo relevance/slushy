@@ -1,21 +1,26 @@
 require 'timeout'
 
 class Slushy::Instance
-  attr_reader :connection, :instance_id
+  attr_reader :connection, :instance_id, :instance_attributes
 
-  def self.launch(connection, config)
+  def self.launch(connection, config, instance_attributes = {})
     server = connection.servers.create(config)
     server.wait_for { ready? } or raise Slushy::TimeoutError.new("Timeout launching server #{server.id}")
-    new(connection, server.id)
+    new(connection, server.id, instance_attributes)
   end
 
-  def initialize(connection, instance_id)
+  def initialize(connection, instance_id, instance_attributes = {})
     @connection = connection
     @instance_id = instance_id
+    @instance_attributes = instance_attributes
   end
 
   def server
-    @server ||= @connection.servers.get(instance_id)
+    @server ||= connection.servers.get(instance_id).tap do |server|
+      instance_attributes.each do |attr, value|
+        server.send("#{attr}=", value)
+      end
+    end
   end
 
   def ssh(*args)
