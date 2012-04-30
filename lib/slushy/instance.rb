@@ -5,7 +5,7 @@ class Slushy::Instance
 
   def self.launch(connection, config)
     server = connection.servers.create(config)
-    server.wait_for { ready? }
+    server.wait_for { ready? } or raise Slushy::Error.new("Timeout launching server #{server.id}")
     new(connection, server.id)
   end
 
@@ -34,18 +34,18 @@ class Slushy::Instance
     response = connection.create_image(instance_id, name, description)
     image_id = response.body["imageId"]
     image = connection.images.get(image_id)
-    image.wait_for { state == "available" }
+    image.wait_for(3600) { ready? } or raise Slushy::Error.new("Timeout creating snapshot #{image_id}")
     image_id
   end
 
   def terminate
     server.destroy
-    server.wait_for { state == "terminated" }
+    server.wait_for { state == "terminated" } or raise Slushy::Error.new("Timeout terminating server #{server.id}")
   end
 
   def stop
     server.stop
-    server.wait_for { state == "stopped" }
+    server.wait_for { state == "stopped" } or raise Slushy::Error.new("Timeout stopping server #{server.id}")
   end
 
   def wait_for_connectivity

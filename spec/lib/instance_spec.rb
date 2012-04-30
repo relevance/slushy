@@ -20,6 +20,13 @@ describe Slushy::Instance do
       lambda { described_class.launch(connection, config) }.should change { connection.servers.size }.by(1)
     end
 
+    it "raises if wait_for fails" do
+      servers = stub(:create => server)
+      connection.stub(:servers).and_return(servers)
+      server.stub(:wait_for).and_return(false)
+      lambda { described_class.launch(connection, config) }.should raise_error(Slushy::Error)
+    end
+
     it "returns the instance object" do
       described_class.launch(connection, config).should be_a Slushy::Instance
     end
@@ -57,8 +64,16 @@ describe Slushy::Instance do
     it "does NOT return until image creation is complete" do
       connection.stub(:create_image).and_return(response)
       images.should_receive(:get).with(:some_ami_id).and_return(image)
-      image.should_receive(:wait_for)
+      image.should_receive(:ready?).ordered.and_return(false)
+      image.should_receive(:ready?).ordered.and_return(true)
       instance.snapshot(:some_name, :some_description)
+    end
+
+    it "raises if wait_for fails" do
+      connection.stub(:create_image).and_return(response)
+      images.should_receive(:get).with(:some_ami_id).and_return(image)
+      image.stub(:wait_for).and_return(false)
+      lambda { instance.snapshot(:some_name, :some_description) }.should raise_error(Slushy::Error)
     end
   end
 
@@ -66,8 +81,33 @@ describe Slushy::Instance do
     it "terminates the given instance" do
       instance.stub(:server).and_return(server)
       server.should_receive(:destroy)
-      server.should_receive(:wait_for)
+      server.should_receive(:state).ordered.and_return("running")
+      server.should_receive(:state).ordered.and_return("terminated")
       instance.terminate
+    end
+
+    it "raises if wait_for fails" do
+      instance.stub(:server).and_return(server)
+      server.stub(:destroy)
+      server.stub(:wait_for).and_return(false)
+      lambda { instance.terminate }.should raise_error(Slushy::Error)
+    end
+  end
+
+  describe "#stop" do
+    it "stops the given instance" do
+      instance.stub(:server).and_return(server)
+      server.should_receive(:stop)
+      server.should_receive(:state).ordered.and_return("running")
+      server.should_receive(:state).ordered.and_return("stopped")
+      instance.stop
+    end
+
+    it "raises if wait_for fails" do
+      instance.stub(:server).and_return(server)
+      server.stub(:stop)
+      server.stub(:wait_for).and_return(false)
+      lambda { instance.stop }.should raise_error(Slushy::Error)
     end
   end
 
