@@ -89,7 +89,9 @@ class Slushy::Instance
     cookbooks_path = "#{cookbooks_path}/" unless cookbooks_path.to_s.end_with?('/')
     scp(cookbooks_path, '/tmp/chef-solo', :recursive => true)
     puts "Converging server, this may take a while (10-20 minutes)"
-    run_command!('cd /tmp/chef-solo && sudo /var/lib/gems/1.8/bin/chef-solo -c solo.rb -j dna.json')
+    path_part = 'PATH=/var/lib/gems/1.8/bin:/usr/local/bin:$PATH'
+    cmd = "cd /tmp/chef-solo && #{path_part} sudo chef-solo -c solo.rb -j dna.json"
+    run_command!(cmd)
   end
 
   protected
