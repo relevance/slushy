@@ -87,6 +87,7 @@ class Slushy::Instance
   def converge(cookbooks_path) # TODO: find the standard Chef term for this
     puts "Copying chef resources from provision directory..."
     cookbooks_path = "#{cookbooks_path}/" unless cookbooks_path.to_s.end_with?('/')
+    run_command!('sudo rm -rf /tmp/chef-solo') # scp does not clobber existing files
     scp(cookbooks_path, '/tmp/chef-solo', :recursive => true)
     puts "Converging server, this may take a while (10-20 minutes)"
     path_part = 'PATH=/var/lib/gems/1.8/bin:/usr/local/bin:$PATH'
