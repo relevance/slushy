@@ -187,8 +187,9 @@ describe Slushy::Instance do
 
   describe "#converge" do
     it "converges the given instance" do
+      instance.should_receive(:run_command!).ordered.with("sudo rm -rf /tmp/chef-solo")
       instance.should_receive(:scp).ordered.with('some_path/', "/tmp/chef-solo", :recursive => true).and_return(true)
-      instance.should_receive(:run_command).ordered.with("cd /tmp/chef-solo && sudo /var/lib/gems/1.8/bin/chef-solo -c solo.rb -j dna.json").and_return(true)
+      instance.should_receive(:run_command!).ordered.with(%Q{cd /tmp/chef-solo && sudo sh -c "PATH=/var/lib/gems/1.8/bin:/usr/local/bin:$PATH chef-solo -c solo.rb -j dna.json"}).and_return(true)
       capture_stdout { instance.converge(Pathname.new('some_path')) }
     end
   end
